@@ -1,5 +1,6 @@
 "use server";
 
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { createServerSupabaseClient } from "@/lib/supabase-server";
 
@@ -24,6 +25,9 @@ export async function login(formData: FormData) {
   if (errorMessage) {
     redirect(`/login?error=${encodeURIComponent(errorMessage)}`);
   }
+
+  const cookieStore = await cookies();
+  cookieStore.set("loggedIn", "true", { path: "/", httpOnly: false, maxAge: 60 * 60 * 24 * 30 });
 
   redirect("/profile");
 }
@@ -62,5 +66,9 @@ export async function signup(formData: FormData) {
 export async function logout() {
   const supabase = await createServerSupabaseClient();
   await supabase.auth.signOut();
+
+  const cookieStore = await cookies();
+  cookieStore.set("loggedIn", "false", { path: "/", httpOnly: false, maxAge: 60 * 60 * 24 * 30 });
+
   redirect("/");
 }

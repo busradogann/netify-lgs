@@ -1,9 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
-import { LogIn, UserPlus, Mail, Lock, User, AlertCircle, CheckCircle2 } from "lucide-react";
+import { LogIn, UserPlus, Mail, Lock, User, AlertCircle, CheckCircle2, BookOpen, School, Calculator, Trophy } from "lucide-react";
 import { login, signup } from "@/app/login/actions";
+
+const loadingTips = [
+  { icon: BookOpen, text: "Binlerce soru ile LGS'ye hazırlan!" },
+  { icon: School, text: "Türkiye'deki tüm liseleri karşılaştır." },
+  { icon: Calculator, text: "Puan hesaplama ile sıralamandaki yerini öğren." },
+  { icon: Trophy, text: "Deneme sınavları ile kendini test et!" },
+];
 
 export default function LoginForm() {
   const searchParams = useSearchParams();
@@ -13,9 +20,52 @@ export default function LoginForm() {
 
   const [tab, setTab] = useState<"login" | "signup">(initialTab);
   const [loading, setLoading] = useState(false);
+  const [tipIndex, setTipIndex] = useState(0);
+
+  useEffect(() => {
+    if (!loading) return;
+    const interval = setInterval(() => {
+      setTipIndex((prev) => (prev + 1) % loadingTips.length);
+    }, 2000);
+    return () => clearInterval(interval);
+  }, [loading]);
 
   function handleSubmit() {
     setLoading(true);
+  }
+
+  const currentTip = loadingTips[tipIndex];
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-10">
+        <div className="relative mb-6">
+          <div className="h-14 w-14 animate-spin rounded-full border-4 border-primary/20 border-t-primary" />
+          <div className="absolute inset-0 flex items-center justify-center">
+            <currentTip.icon className="h-5 w-5 text-primary animate-pulse" />
+          </div>
+        </div>
+        <p className="mb-2 text-sm font-semibold text-foreground">
+          {tab === "login" ? "Giriş yapılıyor..." : "Hesap oluşturuluyor..."}
+        </p>
+        <p
+          key={tipIndex}
+          className="text-center text-sm text-muted animate-[fadeInUp_0.4s_ease-out]"
+        >
+          {currentTip.text}
+        </p>
+        <div className="mt-6 flex gap-1.5">
+          {loadingTips.map((_, i) => (
+            <div
+              key={i}
+              className={`h-1.5 rounded-full transition-all duration-300 ${
+                i === tipIndex ? "w-6 bg-primary" : "w-1.5 bg-primary/20"
+              }`}
+            />
+          ))}
+        </div>
+      </div>
+    );
   }
 
   return (

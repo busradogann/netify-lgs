@@ -1,14 +1,25 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import { redirect } from "next/navigation";
 import { GraduationCap } from "lucide-react";
+import { createServerSupabaseClient } from "@/lib/supabase-server";
 import LoginForm from "@/components/auth/LoginForm";
+
+export const instant = false;
 
 export const metadata: Metadata = {
   title: "Giriş Yap",
   description: "Netify LGS hesabına giriş yap veya yeni hesap oluştur.",
 };
 
-export default function LoginPage() {
+export default async function LoginPage() {
+  const supabase = await createServerSupabaseClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (user) {
+    redirect("/profile");
+  }
+
   return (
     <div className="mx-auto max-w-md px-4 py-12">
       <div className="mb-8 text-center">

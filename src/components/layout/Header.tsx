@@ -37,9 +37,16 @@ function useTheme() {
   return { theme, toggle };
 }
 
+function getCookie(name: string): string | null {
+  if (typeof document === "undefined") return null;
+  const match = document.cookie.match(new RegExp("(?:^|; )" + name + "=([^;]*)"));
+  return match ? match[1] : null;
+}
+
 export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
-  const { userId, email, profile } = useUser();
+  const { userId, loading: userLoading, email, profile } = useUser();
+  const isLoggedIn = getCookie("loggedIn") === "true" || !!userId;
   const { theme, toggle: toggleTheme } = useTheme();
   const router = useRouter();
   const isParent = profile?.role === "ebeveyn";
@@ -88,7 +95,7 @@ export default function Header() {
           >
             {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
           </button>
-          {userId ? (
+          {isLoggedIn ? (
             <Link
               href="/profile"
               className="ml-1 flex items-center gap-1.5 rounded-lg bg-primary/10 px-3 py-2 text-sm font-semibold text-primary transition-colors hover:bg-primary/20"
@@ -96,6 +103,8 @@ export default function Header() {
               <User className="h-4 w-4" />
               Profil
             </Link>
+          ) : userLoading ? (
+            <div className="ml-1 h-9 w-20 animate-pulse rounded-lg bg-primary/10" />
           ) : (
             <Link
               href="/login"
@@ -152,7 +161,7 @@ export default function Header() {
               </Link>
             );
           })}
-          {userId ? (
+          {isLoggedIn ? (
             <Link
               href="/profile"
               onClick={() => setMenuOpen(false)}
@@ -161,6 +170,8 @@ export default function Header() {
               <User className="h-4 w-4" />
               Profil
             </Link>
+          ) : userLoading ? (
+            <div className="mt-2 h-11 animate-pulse rounded-lg bg-primary/10" />
           ) : (
             <Link
               href="/login"

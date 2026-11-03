@@ -10,7 +10,9 @@ export async function GET(request: Request) {
     const supabase = await createServerSupabaseClient();
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) {
-      return NextResponse.redirect(`${origin}${next}`);
+      const response = NextResponse.redirect(`${origin}${next}`);
+      response.cookies.set("loggedIn", "true", { path: "/", httpOnly: false, maxAge: 60 * 60 * 24 * 30 });
+      return response;
     }
   }
 

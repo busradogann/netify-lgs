@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase";
 
 interface UserState {
   loading: boolean;
+  loggedIn: boolean;
   userId: string | null;
   email: string | null;
   profile: Profile | null;
@@ -15,6 +16,7 @@ interface UserState {
 
 const UserContext = createContext<UserState>({
   loading: true,
+  loggedIn: false,
   userId: null,
   email: null,
   profile: null,
@@ -26,9 +28,15 @@ export function useUser() {
   return useContext(UserContext);
 }
 
-export function UserProvider({ children }: { children: React.ReactNode }) {
+interface UserProviderProps {
+  children: React.ReactNode;
+  initialLoggedIn?: boolean;
+}
+
+export function UserProvider({ children, initialLoggedIn = false }: UserProviderProps) {
   const [base, setBase] = useState<Omit<UserState, "favoriteIds" | "toggleFavorite">>({
     loading: true,
+    loggedIn: initialLoggedIn,
     userId: null,
     email: null,
     profile: null,
@@ -44,10 +52,13 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       } = await supabase.auth.getUser();
 
       if (!user) {
-        setBase({ loading: false, userId: null, email: null, profile: null });
+        document.cookie = "loggedIn=false; path=/; max-age=" + 60 * 60 * 24 * 30;
+        setBase({ loading: false, loggedIn: false, userId: null, email: null, profile: null });
         setFavoriteIds(new Set());
         return;
       }
+
+      document.cookie = "loggedIn=true; path=/; max-age=" + 60 * 60 * 24 * 30;
 
       const [{ data: profile }, { data: favs }] = await Promise.all([
         supabase.from("profiles").select("*").eq("id", user.id).single(),
@@ -56,6 +67,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
 
       setBase({
         loading: false,
+        loggedIn: true,
         userId: user.id,
         email: user.email ?? null,
         profile: profile ?? null,

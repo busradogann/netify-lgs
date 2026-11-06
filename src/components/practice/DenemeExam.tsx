@@ -16,7 +16,11 @@ import {
 import Link from "next/link";
 import { createClient } from "@/lib/supabase";
 import { SCHOOL_TYPE_LABELS } from "@/lib/utils";
-import type { Question, Subject, SchoolWithScore } from "@/types/database";
+import { TYPE_STYLES, SUBJECT_LABELS, SUBJECT_COLORS, getDifficultyBadge } from "@/lib/constants";
+import { calculateWeightedScore, LGS_WEIGHTS } from "@/lib/score-calculator";
+import { fetchMatchingSchools } from "@/lib/school-matcher";
+import ResultStat from "@/components/shared/ResultStat";
+import type { Question, Subject, SchoolWithYearlyScores } from "@/types/database";
 
 const EXAM_DURATION = 155 * 60;
 
@@ -28,54 +32,6 @@ const SUBJECT_DISTRIBUTION: { subject: Subject; count: number }[] = [
   { subject: "din", count: 10 },
   { subject: "yabanciDil", count: 10 },
 ];
-
-const SUBJECT_LABELS: Record<Subject, string> = {
-  turkce: "Türkçe",
-  matematik: "Matematik",
-  fen: "Fen Bilimleri",
-  inkilap: "İnkılap Tarihi",
-  din: "Din Kültürü",
-  yabanciDil: "Yabancı Dil",
-};
-
-const SUBJECT_COLORS: Record<Subject, string> = {
-  turkce: "bg-blue-500",
-  matematik: "bg-indigo-500",
-  fen: "bg-emerald-500",
-  inkilap: "bg-amber-500",
-  din: "bg-rose-500",
-  yabanciDil: "bg-purple-500",
-};
-
-const NET_COEFFICIENTS: Record<Subject, number> = {
-  turkce: 4,
-  matematik: 4,
-  fen: 4,
-  inkilap: 2,
-  din: 2,
-  yabanciDil: 2,
-};
-
-const TYPE_STYLES: Record<string, string> = {
-  fen: "bg-purple-100 text-purple-700",
-  anadolu: "bg-blue-100 text-blue-700",
-  sosyal: "bg-amber-100 text-amber-700",
-  imam_hatip: "bg-teal-100 text-teal-700",
-  meslek: "bg-gray-100 text-gray-700",
-};
-
-interface SchoolWithYearlyScores extends SchoolWithScore {
-  yearlyScores: Record<number, number | null>;
-}
-
-function getDifficultyBadge(userScore: number, schoolScore: number) {
-  const diff = userScore - schoolScore;
-  if (diff >= 10) return { label: "Rahat gelir", cls: "bg-emerald-100 text-emerald-700" };
-  if (diff >= 3) return { label: "Gelir", cls: "bg-green-100 text-green-700" };
-  if (diff >= -3) return { label: "Sınırda", cls: "bg-amber-100 text-amber-700" };
-  if (diff >= -15) return { label: "Zor", cls: "bg-orange-100 text-orange-700" };
-  return { label: "Çok Zor", cls: "bg-red-100 text-red-700" };
-}
 
 type ExamPhase = "intro" | "exam" | "review" | "results";
 
@@ -168,12 +124,11 @@ export default function DenemeExam() {
     return `${m}:${String(s).padStart(2, "0")}`;
   }
 
-  async function fetchMatchingSchools() {
+  async function loadMatchingSchools() {
     setLoadingSchools(true);
     setSchoolPage(1);
     const { subjectResults: sr, estimatedScore: score } = calculateResults();
 
-    // Save to score history
     const totalNet = Object.values(sr).reduce((s, r) => s + r.net, 0);
     const supabase = createClient();
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -193,49 +148,8 @@ export default function DenemeExam() {
     });
 
     try {
-      const supabaseQ = createClient();
-
-      const { data: scores2026 } = await supabaseQ
-        .from("placement_scores")
-        .select("*")
-        .eq("year", 2026)
-        .gte("min_score", score - 50)
-        .lte("min_score", score + 30)
-        .order("min_score", { ascending: false })
-        .limit(500);
-
-      if (scores2026 && scores2026.length > 0) {
-        const schoolIds = [...new Set(scores2026.map((s: any) => s.school_id))];
-
-        const [{ data: schools }, { data: allScores }] = await Promise.all([
-          supabaseQ.from("schools").select("*").in("id", schoolIds),
-          supabaseQ.from("placement_scores").select("*").in("school_id", schoolIds).order("year", { ascending: true }).limit(5000),
-        ]);
-
-        const merged: SchoolWithYearlyScores[] = (schools ?? []).map((school: any) => {
-          const schoolScores = (allScores ?? []).filter((s: any) => s.school_id === school.id);
-          const yearlyScores: Record<number, number | null> = {};
-          for (const s of schoolScores) yearlyScores[s.year] = s.min_score;
-          return {
-            ...school,
-            placement: scores2026.find((s: any) => s.school_id === school.id) ?? null,
-            yearlyScores,
-          };
-        });
-
-        const badgeOrder = ["Rahat gelir", "Gelir", "Sınırda", "Zor", "Çok Zor"];
-        merged.sort((a, b) => {
-          const ba = getDifficultyBadge(score, a.placement?.min_score ?? 0);
-          const bb = getDifficultyBadge(score, b.placement?.min_score ?? 0);
-          const diff = badgeOrder.indexOf(ba.label) - badgeOrder.indexOf(bb.label);
-          if (diff !== 0) return diff;
-          return (b.placement?.min_score ?? 0) - (a.placement?.min_score ?? 0);
-        });
-
-        setMatchingSchools(merged);
-      } else {
-        setMatchingSchools([]);
-      }
+      const schools = await fetchMatchingSchools(score);
+      setMatchingSchools(schools);
     } catch {
       setMatchingSchools([]);
     }
@@ -271,15 +185,16 @@ export default function DenemeExam() {
       idx += count;
     }
 
-    let totalWeightedNet = 0;
-    for (const { subject } of SUBJECT_DISTRIBUTION) {
-      totalWeightedNet += subjectResults[subject].net * NET_COEFFICIENTS[subject];
-    }
+    const estimatedScore = calculateWeightedScore({
+      turkce: subjectResults.turkce.net,
+      matematik: subjectResults.matematik.net,
+      fen: subjectResults.fen.net,
+      inkilap: subjectResults.inkilap.net,
+      din: subjectResults.din.net,
+      yabanciDil: subjectResults.yabanciDil.net,
+    });
 
-    const estimatedScore = 200 + (totalWeightedNet / 18) * 300;
-    const clampedScore = Math.max(200, Math.min(500, estimatedScore));
-
-    return { subjectResults, estimatedScore: clampedScore };
+    return { subjectResults, estimatedScore };
   }
 
   // --- INTRO ---
@@ -521,7 +436,7 @@ export default function DenemeExam() {
             <button
               onClick={async () => {
                 setPhase("results");
-                await fetchMatchingSchools();
+                await loadMatchingSchools();
               }}
               className="rounded-xl bg-primary px-6 py-2.5 text-sm font-semibold text-white transition-all hover:bg-primary-dark"
             >
@@ -760,11 +675,3 @@ export default function DenemeExam() {
   );
 }
 
-function ResultStat({ label, value, color, bg }: { label: string; value: number; color: string; bg: string }) {
-  return (
-    <div className={`rounded-xl ${bg} p-3`}>
-      <p className={`text-xs ${color}`}>{label}</p>
-      <p className={`mt-1 text-xl font-bold ${color}`}>{value}</p>
-    </div>
-  );
-}

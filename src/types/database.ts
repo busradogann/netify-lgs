@@ -26,6 +26,10 @@ export interface SchoolWithScore extends School {
   placements?: PlacementScore[];
 }
 
+export interface SchoolWithYearlyScores extends SchoolWithScore {
+  yearlyScores: Record<number, number | null>;
+}
+
 export interface Profile {
   id: string;
   email: string | null;

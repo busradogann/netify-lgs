@@ -4,9 +4,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { createServerSupabaseClient } from "@/lib/supabase-server";
 
-export async function login(formData: FormData) {
-  let errorMessage: string | null = null;
-
+export async function login(_prevState: { error: string } | null, formData: FormData) {
   try {
     const supabase = await createServerSupabaseClient();
 
@@ -16,14 +14,17 @@ export async function login(formData: FormData) {
     });
 
     if (error) {
-      errorMessage = error.message;
+      const msg = error.message;
+      if (msg.includes("Invalid login credentials")) {
+        return { error: "E-posta veya şifre hatalı." };
+      }
+      if (msg.includes("is not valid JSON") || msg.includes("<!DOCTYPE")) {
+        return { error: "Sunucuya bağlanılamadı. Lütfen daha sonra tekrar deneyin." };
+      }
+      return { error: msg };
     }
-  } catch (e) {
-    errorMessage = "Bir hata oluştu. Lütfen tekrar deneyin.";
-  }
-
-  if (errorMessage) {
-    redirect(`/login?error=${encodeURIComponent(errorMessage)}`);
+  } catch {
+    return { error: "Bir hata oluştu. Lütfen tekrar deneyin." };
   }
 
   const cookieStore = await cookies();
@@ -32,9 +33,7 @@ export async function login(formData: FormData) {
   redirect("/profile");
 }
 
-export async function signup(formData: FormData) {
-  let errorMessage: string | null = null;
-
+export async function signup(_prevState: { error: string; message?: string } | null, formData: FormData) {
   try {
     const supabase = await createServerSupabaseClient();
 
@@ -50,17 +49,16 @@ export async function signup(formData: FormData) {
     });
 
     if (error) {
-      errorMessage = error.message;
+      if (error.message.includes("is not valid JSON") || error.message.includes("<!DOCTYPE")) {
+        return { error: "Sunucuya bağlanılamadı. Lütfen daha sonra tekrar deneyin." };
+      }
+      return { error: error.message };
     }
-  } catch (e) {
-    errorMessage = "Bir hata oluştu. Lütfen tekrar deneyin.";
+  } catch {
+    return { error: "Bir hata oluştu. Lütfen tekrar deneyin." };
   }
 
-  if (errorMessage) {
-    redirect(`/login?error=${encodeURIComponent(errorMessage)}&tab=signup`);
-  }
-
-  redirect(`/login?message=${encodeURIComponent("Kayıt başarılı! E-postanı kontrol et.")}`);
+  return { error: "", message: "Kayıt başarılı! E-postanı kontrol et." };
 }
 
 export async function logout() {

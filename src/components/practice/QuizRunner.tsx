@@ -9,6 +9,8 @@ import {
   Trophy,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase";
+import { SUBJECT_LABELS, SUBJECT_COLORS } from "@/lib/constants";
+import ResultStat from "@/components/shared/ResultStat";
 import type { Question, Subject } from "@/types/database";
 
 const ALL_SUBJECTS: Subject[] = [
@@ -19,24 +21,6 @@ const ALL_SUBJECTS: Subject[] = [
   "din",
   "yabanciDil",
 ];
-
-const SUBJECT_LABELS: Record<Subject, string> = {
-  turkce: "Türkçe",
-  matematik: "Matematik",
-  fen: "Fen Bilimleri",
-  inkilap: "İnkılap Tarihi",
-  din: "Din Kültürü",
-  yabanciDil: "Yabancı Dil",
-};
-
-const SUBJECT_COLORS: Record<Subject, string> = {
-  turkce: "bg-blue-500",
-  matematik: "bg-indigo-500",
-  fen: "bg-emerald-500",
-  inkilap: "bg-amber-500",
-  din: "bg-rose-500",
-  yabanciDil: "bg-purple-500",
-};
 
 const QUESTION_COUNT = 10;
 
@@ -323,21 +307,3 @@ export default function QuizRunner() {
   );
 }
 
-function ResultStat({
-  label,
-  value,
-  color,
-  bg,
-}: {
-  label: string;
-  value: number;
-  color: string;
-  bg: string;
-}) {
-  return (
-    <div className={`rounded-xl ${bg} p-4`}>
-      <p className={`text-sm ${color}`}>{label}</p>
-      <p className={`mt-1 text-2xl font-bold ${color}`}>{value}</p>
-    </div>
-  );
-}

@@ -1,33 +1,14 @@
 import Link from "next/link";
 import { MapPin, Users, TrendingUp } from "lucide-react";
 import type { SchoolWithScore } from "@/types/database";
-import { formatRanking } from "@/lib/utils";
-import { SCHOOL_TYPE_LABELS } from "@/lib/utils";
+import { formatRanking, SCHOOL_TYPE_LABELS } from "@/lib/utils";
+import { TYPE_STYLES, getMatchStatus } from "@/lib/constants";
 import FavoriteButton from "@/components/shared/FavoriteButton";
-
-const TYPE_STYLES: Record<string, string> = {
-  fen: "bg-purple-100 text-purple-700",
-  anadolu: "bg-blue-100 text-blue-700",
-  sosyal: "bg-amber-100 text-amber-700",
-  imam_hatip: "bg-teal-100 text-teal-700",
-  meslek: "bg-gray-100 text-gray-700",
-};
 
 interface SchoolCardProps {
   school: SchoolWithScore;
   userRanking?: number;
   years?: number[];
-}
-
-function getMatchStatus(userRanking: number, minRanking: number) {
-  const diff = minRanking - userRanking;
-  if (diff > minRanking * 0.15) {
-    return { label: "Rahat", className: "bg-emerald-100 text-emerald-700" };
-  }
-  if (diff >= 0) {
-    return { label: "Sınırda", className: "bg-amber-100 text-amber-700" };
-  }
-  return { label: "Zor", className: "bg-red-100 text-red-700" };
 }
 
 export default function SchoolCard({ school, userRanking, years = [] }: SchoolCardProps) {

@@ -13,17 +13,9 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import type { SchoolWithScore } from "@/types/database";
-import { SCHOOL_TYPE_LABELS } from "@/lib/utils";
-import { formatRanking, formatScore } from "@/lib/utils";
+import { SCHOOL_TYPE_LABELS, formatRanking, formatScore } from "@/lib/utils";
+import { TYPE_STYLES } from "@/lib/constants";
 import { createClient } from "@/lib/supabase";
-
-const TYPE_STYLES: Record<string, string> = {
-  fen: "bg-purple-100 text-purple-700",
-  anadolu: "bg-blue-100 text-blue-700",
-  sosyal: "bg-amber-100 text-amber-700",
-  imam_hatip: "bg-teal-100 text-teal-700",
-  meslek: "bg-gray-100 text-gray-700",
-};
 
 export default function FavoritesList({
   initialSchools,

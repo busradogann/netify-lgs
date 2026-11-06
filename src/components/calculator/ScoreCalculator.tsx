@@ -11,12 +11,10 @@ import {
   getSubjectLabel,
 } from "@/lib/score-calculator";
 import { formatScore, SCHOOL_TYPE_LABELS } from "@/lib/utils";
+import { TYPE_STYLES, SUBJECT_COLORS, getDifficultyBadge } from "@/lib/constants";
+import { fetchMatchingSchools } from "@/lib/school-matcher";
 import { createClient } from "@/lib/supabase";
-import type { SchoolWithScore } from "@/types/database";
-
-interface SchoolWithYearlyScores extends SchoolWithScore {
-  yearlyScores: Record<number, number | null>;
-}
+import type { SchoolWithYearlyScores } from "@/types/database";
 
 const subjectKeys: (keyof LGSInput)[] = [
   "turkce",
@@ -26,32 +24,6 @@ const subjectKeys: (keyof LGSInput)[] = [
   "din",
   "yabanciDil",
 ];
-
-const subjectColors: Record<keyof LGSInput, string> = {
-  turkce: "bg-blue-500",
-  matematik: "bg-indigo-500",
-  fen: "bg-emerald-500",
-  inkilap: "bg-amber-500",
-  din: "bg-rose-500",
-  yabanciDil: "bg-purple-500",
-};
-
-const TYPE_STYLES: Record<string, string> = {
-  fen: "bg-purple-100 text-purple-700",
-  anadolu: "bg-blue-100 text-blue-700",
-  sosyal: "bg-amber-100 text-amber-700",
-  imam_hatip: "bg-teal-100 text-teal-700",
-  meslek: "bg-gray-100 text-gray-700",
-};
-
-function getDifficultyBadge(userScore: number, schoolScore: number) {
-  const diff = userScore - schoolScore;
-  if (diff >= 10) return { label: "Rahat gelir", cls: "bg-emerald-100 text-emerald-700" };
-  if (diff >= 3) return { label: "Gelir", cls: "bg-green-100 text-green-700" };
-  if (diff >= -3) return { label: "Sınırda", cls: "bg-amber-100 text-amber-700" };
-  if (diff >= -15) return { label: "Zor", cls: "bg-orange-100 text-orange-700" };
-  return { label: "Çok Zor", cls: "bg-red-100 text-red-700" };
-}
 
 const emptyInput: LGSInput = {
   turkce: 15,
@@ -92,49 +64,8 @@ export default function ScoreCalculator() {
     const score = calculateWeightedScore(nets);
 
     try {
-      const supabaseQ = createClient();
-
-      const { data: scores2026 } = await supabaseQ
-        .from("placement_scores")
-        .select("*")
-        .eq("year", 2026)
-        .gte("min_score", score - 50)
-        .lte("min_score", score + 30)
-        .order("min_score", { ascending: false })
-        .limit(500);
-
-      if (scores2026 && scores2026.length > 0) {
-        const schoolIds = [...new Set(scores2026.map((s: any) => s.school_id))];
-
-        const [{ data: schools }, { data: allScores }] = await Promise.all([
-          supabaseQ.from("schools").select("*").in("id", schoolIds),
-          supabaseQ.from("placement_scores").select("*").in("school_id", schoolIds).order("year", { ascending: true }).limit(5000),
-        ]);
-
-        const merged: SchoolWithYearlyScores[] = (schools ?? []).map((school: any) => {
-          const schoolScores = (allScores ?? []).filter((s: any) => s.school_id === school.id);
-          const yearlyScores: Record<number, number | null> = {};
-          for (const s of schoolScores) yearlyScores[s.year] = s.min_score;
-          return {
-            ...school,
-            placement: scores2026.find((s: any) => s.school_id === school.id) ?? null,
-            yearlyScores,
-          };
-        });
-
-        const badgeOrder = ["Rahat gelir", "Gelir", "Sınırda", "Zor", "Çok Zor"];
-        merged.sort((a, b) => {
-          const ba = getDifficultyBadge(score, a.placement?.min_score ?? 0);
-          const bb = getDifficultyBadge(score, b.placement?.min_score ?? 0);
-          const diff = badgeOrder.indexOf(ba.label) - badgeOrder.indexOf(bb.label);
-          if (diff !== 0) return diff;
-          return (b.placement?.min_score ?? 0) - (a.placement?.min_score ?? 0);
-        });
-
-        setMatchingSchools(merged);
-      } else {
-        setMatchingSchools([]);
-      }
+      const schools = await fetchMatchingSchools(score);
+      setMatchingSchools(schools);
     } catch {
       setMatchingSchools([]);
     }
@@ -233,7 +164,7 @@ export default function ScoreCalculator() {
                     <div className="flex items-center gap-3">
                       <div className="relative h-2 flex-1 overflow-hidden rounded-full bg-border">
                         <div
-                          className={`absolute inset-y-0 left-0 rounded-full transition-all ${subjectColors[key]}`}
+                          className={`absolute inset-y-0 left-0 rounded-full transition-all ${SUBJECT_COLORS[key]}`}
                           style={{ width: `${pct}%` }}
                         />
                       </div>
@@ -322,7 +253,7 @@ export default function ScoreCalculator() {
                   </span>
                   <div className="relative h-2 flex-1 overflow-hidden rounded-full bg-border">
                     <div
-                      className={`absolute inset-y-0 left-0 rounded-full ${subjectColors[key]}`}
+                      className={`absolute inset-y-0 left-0 rounded-full ${SUBJECT_COLORS[key]}`}
                       style={{ width: `${pct}%` }}
                     />
                   </div>

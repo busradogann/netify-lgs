@@ -1,3 +1,5 @@
+import { SUBJECT_LABELS } from "@/lib/constants";
+
 export interface LGSInput {
   turkce: number;
   matematik: number;
@@ -57,13 +59,5 @@ export function calculateWeightedScore(input: LGSInput): number {
 }
 
 export function getSubjectLabel(key: keyof LGSInput): string {
-  const labels: Record<keyof LGSInput, string> = {
-    turkce: "Türkçe",
-    matematik: "Matematik",
-    fen: "Fen Bilimleri",
-    inkilap: "İnkılap Tarihi",
-    din: "Din Kültürü",
-    yabanciDil: "Yabancı Dil",
-  };
-  return labels[key];
+  return SUBJECT_LABELS[key];
 }

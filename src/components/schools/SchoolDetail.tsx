@@ -7,22 +7,12 @@ import {
   TrendingUp,
   Award,
   ChevronLeft,
-  ChevronDown,
-  Target,
 } from "lucide-react";
 import Link from "next/link";
 import type { SchoolWithScore, PlacementScore } from "@/types/database";
-import { SCHOOL_TYPE_LABELS } from "@/lib/utils";
-import { formatRanking, formatScore } from "@/lib/utils";
+import { SCHOOL_TYPE_LABELS, formatRanking, formatScore } from "@/lib/utils";
+import { TYPE_STYLES } from "@/lib/constants";
 import FavoriteButton from "@/components/shared/FavoriteButton";
-
-const TYPE_STYLES: Record<string, string> = {
-  fen: "bg-purple-100 text-purple-700",
-  anadolu: "bg-blue-100 text-blue-700",
-  sosyal: "bg-amber-100 text-amber-700",
-  imam_hatip: "bg-teal-100 text-teal-700",
-  meslek: "bg-gray-100 text-gray-700",
-};
 
 interface SchoolDetailProps {
   school: SchoolWithScore;
@@ -31,7 +21,6 @@ interface SchoolDetailProps {
 
 export default function SchoolDetail({ school, history }: SchoolDetailProps) {
   const [userScore, setUserScore] = useState("");
-  const [showAnalysis, setShowAnalysis] = useState(false);
   const placement = school.placement;
   const parsedScore = userScore ? Number(userScore.replace(",", ".")) : undefined;
 
@@ -110,8 +99,8 @@ export default function SchoolDetail({ school, history }: SchoolDetailProps) {
                 type="text"
                 inputMode="decimal"
                 value={userScore}
-                onChange={(e) => { setUserScore(e.target.value); setShowAnalysis(true); }}
-                onFocus={(e) => { e.target.select(); setShowAnalysis(true); }}
+                onChange={(e) => setUserScore(e.target.value)}
+                onFocus={(e) => e.target.select()}
                 placeholder="Tahmini puanını gir..."
                 className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm font-medium text-foreground outline-none transition-colors placeholder:text-muted focus:border-primary"
               />

@@ -1,9 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
-import { Menu, X, GraduationCap, Sun, Moon, User, LogOut, Lock } from "lucide-react";
+import { Menu, X, GraduationCap, Sun, Moon, User, Lock } from "lucide-react";
 import { useUser } from "@/lib/user-context";
 import LGSCountdown from "./LGSCountdown";
 
@@ -48,7 +47,6 @@ export default function Header() {
   const { userId, loading: userLoading, email, profile } = useUser();
   const isLoggedIn = getCookie("loggedIn") === "true" || !!userId;
   const { theme, toggle: toggleTheme } = useTheme();
-  const router = useRouter();
   const isParent = profile?.role === "ebeveyn";
 
   return (

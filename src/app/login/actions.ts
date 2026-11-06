@@ -15,6 +15,7 @@ export async function login(_prevState: { error: string } | null, formData: Form
 
     if (error) {
       const msg = error.message;
+      console.error("[login] Supabase auth error:", msg);
       if (msg.includes("Invalid login credentials")) {
         return { error: "E-posta veya şifre hatalı." };
       }
@@ -23,7 +24,8 @@ export async function login(_prevState: { error: string } | null, formData: Form
       }
       return { error: msg };
     }
-  } catch {
+  } catch (e) {
+    console.error("[login] Unexpected error:", e);
     return { error: "Bir hata oluştu. Lütfen tekrar deneyin." };
   }
 
